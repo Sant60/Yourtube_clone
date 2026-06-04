@@ -1,17 +1,26 @@
 import VideoCard from "./videocard";
+
 export default function ChannelVideos({ videos }: any) {
-  if (videos.length === 0) {
+  if (!videos || videos.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">No videos uploaded yet.</p>
+      <div style={{ textAlign: "center", padding: "64px 24px", color: "var(--yt-text-secondary)" }}>
+        <p style={{ fontSize: "16px", fontWeight: 500, color: "var(--yt-text-primary)", marginBottom: "8px" }}>
+          No videos yet
+        </p>
+        <p style={{ fontSize: "14px" }}>Upload a video to get started.</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Videos</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: "16px 8px",
+        }}
+      >
         {videos.map((video: any) => (
           <VideoCard key={video._id} video={video} />
         ))}

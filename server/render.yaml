@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: yourtube-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_URL
+        sync: false          # set manually in Render dashboard
+      - key: CLIENT_URL
+        sync: false          # e.g. https://your-app.vercel.app
+      - key: PORT
+        value: 10000         # Render's default port

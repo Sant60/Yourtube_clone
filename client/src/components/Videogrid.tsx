@@ -1,71 +1,30 @@
-// import React, { useEffect, useState } from "react";
-// import Videocard from "./videocard";
-// import axiosInstance from "@/lib/axiosinstance";
-
-// const Videogrid = () => {
-//   const [videos, setvideo] = useState<any>(null);
-//   const [loading, setloading] = useState(true);
-//   useEffect(() => {
-//     const fetchvideo = async () => {
-//       try {
-//         const res = await axiosInstance.get("/video/getall");
-//         setvideo(res.data);
-//       } catch (error) {
-//         console.log(error);
-//       } finally {
-//         setloading(false);
-//       }
-//     };
-//     fetchvideo();
-//   }, []);
-
-//   // const videos = [
-//   //   {
-//   //     _id: "1",
-//   //     videotitle: "Amazing Nature Documentary",
-//   //     filename: "nature-doc.mp4",
-//   //     filetype: "video/mp4",
-//   //     filepath: "/videos/nature-doc.mp4",
-//   //     filesize: "500MB",
-//   //     videochanel: "Nature Channel",
-//   //     Like: 1250,
-//   //     views: 45000,
-//   //     uploader: "nature_lover",
-//   //     createdAt: new Date().toISOString(),
-//   //   },
-//   //   {
-//   //     _id: "2",
-//   //     videotitle: "Cooking Tutorial: Perfect Pasta",
-//   //     filename: "pasta-tutorial.mp4",
-//   //     filetype: "video/mp4",
-//   //     filepath: "/videos/pasta-tutorial.mp4",
-//   //     filesize: "300MB",
-//   //     videochanel: "Chef's Kitchen",
-//   //     Like: 890,
-//   //     views: 23000,
-//   //     uploader: "chef_master",
-//   //     createdAt: new Date(Date.now() - 86400000).toISOString(),
-//   //   },
-//   // ];
-//   return (
-//     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-//       {loading ? (
-//         <>Loading..</>
-//       ) : (
-//         videos.map((video: any) => <Videocard key={video._id} video={video} />)
-//       )}
-//     </div>
-//   );
-// };
-
-// export default Videogrid;
-
 import React, { useEffect, useState } from "react";
 import Videocard from "./videocard";
 import axiosInstance from "@/lib/axiosinstance";
 
+const VideoSkeleton = () => (
+  <div>
+    <div
+      style={{
+        paddingTop: "56.25%",
+        borderRadius: "12px",
+        background: "var(--yt-bg-secondary)",
+        marginBottom: "12px",
+        animation: "pulse 1.5s ease-in-out infinite",
+      }}
+    />
+    <div style={{ display: "flex", gap: "12px" }}>
+      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "var(--yt-bg-secondary)", flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ height: "14px", borderRadius: "4px", background: "var(--yt-bg-secondary)", marginBottom: "8px" }} />
+        <div style={{ height: "12px", borderRadius: "4px", background: "var(--yt-bg-secondary)", width: "70%" }} />
+      </div>
+    </div>
+    <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
+  </div>
+);
+
 const Videogrid = () => {
-  // Initialize as empty array
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,28 +32,77 @@ const Videogrid = () => {
     const fetchVideos = async () => {
       try {
         const res = await axiosInstance.get("/video/getall");
-
-        // Ensure data is always an array
         setVideos(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
-        console.log("Error fetching videos:", error);
+        console.error("Error fetching videos:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchVideos();
   }, []);
 
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: "16px 8px",
+          padding: "16px 24px",
+        }}
+      >
+        {Array.from({ length: 12 }).map((_, i) => (
+          <VideoSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  if (videos.length === 0) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "80px 24px",
+          color: "var(--yt-text-secondary)",
+        }}
+      >
+        <svg width="88" height="88" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+          <line x1="7" y1="2" x2="7" y2="22" />
+          <line x1="17" y1="2" x2="17" y2="22" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <line x1="2" y1="7" x2="7" y2="7" />
+          <line x1="2" y1="17" x2="7" y2="17" />
+          <line x1="17" y1="17" x2="22" y2="17" />
+          <line x1="17" y1="7" x2="22" y2="7" />
+        </svg>
+        <h2 style={{ fontSize: "18px", fontWeight: 600, marginTop: "16px", color: "var(--yt-text-primary)" }}>
+          No videos yet
+        </h2>
+        <p style={{ fontSize: "14px", marginTop: "8px" }}>
+          Upload a video to get started
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {loading ? (
-        <div>Loading...</div>
-      ) : videos.length > 0 ? (
-        videos.map((video: any) => <Videocard key={video._id} video={video} />)
-      ) : (
-        <div>No videos found</div>
-      )}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: "16px 8px",
+        padding: "16px 24px",
+      }}
+    >
+      {videos.map((video: any) => (
+        <Videocard key={video._id} video={video} />
+      ))}
     </div>
   );
 };

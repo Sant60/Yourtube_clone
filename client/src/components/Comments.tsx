@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Textarea } from "./ui/textarea";
-import { Button } from "./ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { useUser } from "@/lib/AuthContext";
 import axiosInstance from "@/lib/axiosinstance";
+import { ThumbsUp, MoreVertical } from "lucide-react";
+
 interface Comment {
   _id: string;
   videoid: string;
@@ -13,52 +13,37 @@ interface Comment {
   usercommented: string;
   commentedon: string;
 }
+
 const Comments = ({ videoId }: any) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
-  const { user } = useUser();
+  const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(true);
-  const fetchedComments = [
-    {
-      _id: "1",
-      videoid: videoId,
-      userid: "1",
-      commentbody: "Great video! Really enjoyed watching this.",
-      usercommented: "John Doe",
-      commentedon: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      _id: "2",
-      videoid: videoId,
-      userid: "2",
-      commentbody: "Thanks for sharing this amazing content!",
-      usercommented: "Jane Smith",
-      commentedon: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ];
-  useEffect(() => {
-    loadComments();
-  }, [videoId]);
+  const { user } = useUser();
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     try {
       const res = await axiosInstance.get(`/comment/${videoId}`);
-      setComments(res.data);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  if (loading) {
-    return <div>Loading history...</div>;
-  }
-  const handleSubmitComment = async () => {
-    if (!user || !newComment.trim()) return;
+      setComments(Array.isArray(res.data) ? res.data : []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [videoId]);
 
+  useEffect(() => {
+    if (!videoId) {
+      setComments([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    loadComments();
+  }, [videoId, loadComments]);
+
+  const handleSubmit = async () => {
+    if (!user || !newComment.trim()) return;
     setIsSubmitting(true);
     try {
       const res = await axiosInstance.post("/comment/postcomment", {
@@ -68,7 +53,7 @@ const Comments = ({ videoId }: any) => {
         usercommented: user.name,
       });
       if (res.data.comment) {
-        const newCommentObj: Comment = {
+        const createdComment = res.data.data ?? {
           _id: Date.now().toString(),
           videoid: videoId,
           userid: user._id,
@@ -76,146 +61,217 @@ const Comments = ({ videoId }: any) => {
           usercommented: user.name || "Anonymous",
           commentedon: new Date().toISOString(),
         };
-        setComments([newCommentObj, ...comments]);
+        setComments((prev) => [createdComment, ...prev]);
+        setNewComment("");
+        setFocused(false);
       }
-      setNewComment("");
-    } catch (error) {
-      console.error("Error adding comment:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setIsSubmitting(false); }
   };
 
-  const handleEdit = (comment: Comment) => {
-    setEditingCommentId(comment._id);
-    setEditText(comment.commentbody);
-  };
-
-  const handleUpdateComment = async () => {
+  const handleUpdate = async () => {
     if (!editText.trim()) return;
     try {
-      const res = await axiosInstance.post(
-        `/comment/editcomment/${editingCommentId}`,
-        { commentbody: editText }
-      );
+      const res = await axiosInstance.patch(`/comment/editcomment/${editingId}`, { commentbody: editText });
       if (res.data) {
         setComments((prev) =>
-          prev.map((c) =>
-            c._id === editingCommentId ? { ...c, commentbody: editText } : c
-          )
+          prev.map((c) => c._id === editingId ? { ...c, commentbody: res.data.commentbody ?? editText } : c)
         );
-        setEditingCommentId(null);
+        setEditingId(null);
         setEditText("");
       }
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await axiosInstance.delete(`/comment/deletecomment/${id}`);
-      if (res.data.comment) {
-        setComments((prev) => prev.filter((c) => c._id !== id));
-      }
-    } catch (error) {
-      console.log(error);
-    }
+      if (res.data.comment) setComments((prev) => prev.filter((c) => c._id !== id));
+    } catch (e) { console.error(e); }
   };
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">{comments.length} Comments</h2>
 
+  if (loading) {
+    return (
+      <div style={{ padding: "24px 0" }}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--yt-bg-secondary)", flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: "12px", borderRadius: "4px", background: "var(--yt-bg-secondary)", width: "30%", marginBottom: "8px" }} />
+              <div style={{ height: "12px", borderRadius: "4px", background: "var(--yt-bg-secondary)", width: "80%" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingTop: "24px" }}>
+      <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "24px", color: "var(--yt-text-primary)" }}>
+        {comments.length.toLocaleString()} Comments
+      </h2>
+
+      {/* New comment input */}
       {user && (
-        <div className="flex gap-4">
-          <Avatar className="w-10 h-10">
+        <div style={{ display: "flex", gap: "16px", marginBottom: "32px" }}>
+          <Avatar style={{ width: "40px", height: "40px", flexShrink: 0 }}>
             <AvatarImage src={user.image || ""} />
-            <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
+            <AvatarFallback style={{ background: "#065fd4", color: "white" }}>
+              {user.name?.[0]?.toUpperCase() || "U"}
+            </AvatarFallback>
           </Avatar>
-          <div className="flex-1 space-y-2">
-            <Textarea
+          <div style={{ flex: 1 }}>
+            <input
+              type="text"
               placeholder="Add a comment..."
               value={newComment}
-              onChange={(e: any) => setNewComment(e.target.value)}
-              className="min-h-[80px] resize-none border-0 border-b-2 rounded-none focus-visible:ring-0"
+              onChange={(e) => setNewComment(e.target.value)}
+              onFocus={() => setFocused(true)}
+              style={{
+                width: "100%",
+                background: "none",
+                border: "none",
+                borderBottom: `2px solid ${focused ? "var(--yt-text-primary)" : "var(--yt-border)"}`,
+                outline: "none",
+                fontSize: "14px",
+                padding: "4px 0",
+                color: "var(--yt-text-primary)",
+                transition: "border-color 0.15s",
+              }}
             />
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="ghost"
-                onClick={() => setNewComment("")}
-                disabled={!newComment.trim()}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmitComment}
-                disabled={!newComment.trim() || isSubmitting}
-              >
-                Comment
-              </Button>
-            </div>
+            {(focused || newComment) && (
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  className="yt-action-btn"
+                  onClick={() => { setNewComment(""); setFocused(false); }}
+                >
+                  Cancel
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "18px",
+                    background: newComment.trim() ? "var(--yt-blue)" : "var(--yt-bg-secondary)",
+                    color: newComment.trim() ? "white" : "var(--yt-text-tertiary)",
+                    border: "none",
+                    cursor: newComment.trim() ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                  onClick={handleSubmit}
+                  disabled={!newComment.trim() || isSubmitting}
+                >
+                  {isSubmitting ? "Posting..." : "Comment"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
-      <div className="space-y-4">
+
+      {/* Comment list */}
+      <div>
         {comments.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">
+          <p style={{ fontSize: "14px", color: "var(--yt-text-secondary)", textAlign: "center", padding: "24px 0" }}>
             No comments yet. Be the first to comment!
           </p>
         ) : (
           comments.map((comment) => (
-            <div key={comment._id} className="flex gap-4">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>{comment.usercommented[0]}</AvatarFallback>
+            <div key={comment._id} style={{ display: "flex", gap: "16px", marginBottom: "24px" }}>
+              <Avatar style={{ width: "40px", height: "40px", flexShrink: 0 }}>
+                <AvatarFallback
+                  style={{
+                    background: `hsl(${(comment.usercommented?.charCodeAt(0) || 0) * 30}, 60%, 45%)`,
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {comment.usercommented?.[0]?.toUpperCase()}
+                </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--yt-text-primary)" }}>
                     {comment.usercommented}
                   </span>
-                  <span className="text-xs text-gray-600">
+                  <span style={{ fontSize: "12px", color: "var(--yt-text-secondary)" }}>
                     {formatDistanceToNow(new Date(comment.commentedon))} ago
                   </span>
                 </div>
 
-                {editingCommentId === comment._id ? (
-                  <div className="space-y-2">
-                    <Textarea
+                {editingId === comment._id ? (
+                  <div>
+                    <input
+                      type="text"
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
+                      style={{
+                        width: "100%",
+                        background: "none",
+                        border: "none",
+                        borderBottom: "2px solid var(--yt-text-primary)",
+                        outline: "none",
+                        fontSize: "14px",
+                        padding: "4px 0",
+                        color: "var(--yt-text-primary)",
+                      }}
                     />
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        onClick={handleUpdateComment}
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                      <button className="yt-action-btn" onClick={() => { setEditingId(null); setEditText(""); }}>Cancel</button>
+                      <button
+                        style={{
+                          padding: "8px 16px",
+                          borderRadius: "18px",
+                          background: "var(--yt-blue)",
+                          color: "white",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: 500,
+                        }}
+                        onClick={handleUpdate}
                         disabled={!editText.trim()}
                       >
                         Save
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingCommentId(null);
-                          setEditText("");
-                        }}
-                      >
-                        Cancel
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm">{comment.commentbody}</p>
-                    {comment.userid === user?._id && (
-                      <div className="flex gap-2 mt-2 text-sm text-gray-500">
-                        <button onClick={() => handleEdit(comment)}>
-                          Edit
-                        </button>
-                        <button onClick={() => handleDelete(comment._id)}>
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    <p style={{ fontSize: "14px", color: "var(--yt-text-primary)", lineHeight: 1.5 }}>
+                      {comment.commentbody}
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                      <button className="yt-icon-btn" style={{ width: "32px", height: "32px" }}>
+                        <ThumbsUp size={14} />
+                      </button>
+                      <button className="yt-icon-btn" style={{ width: "32px", height: "32px" }}>
+                        <ThumbsUp size={14} style={{ transform: "scaleY(-1)" }} />
+                      </button>
+                      <button
+                        style={{ fontSize: "13px", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: "var(--yt-text-primary)", padding: "4px 8px", borderRadius: "18px" }}
+                      >
+                        Reply
+                      </button>
+                      {comment.userid === user?._id && (
+                        <>
+                          <button
+                            style={{ fontSize: "13px", color: "var(--yt-text-secondary)", background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                            onClick={() => { setEditingId(comment._id); setEditText(comment.commentbody); }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            style={{ fontSize: "13px", color: "var(--yt-text-secondary)", background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                            onClick={() => handleDelete(comment._id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </>
                 )}
               </div>

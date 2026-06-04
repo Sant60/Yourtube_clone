@@ -1,7 +1,8 @@
 import axios from "axios";
+import { getBackendBasePath } from "./backend";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000",
+  baseURL: getBackendBasePath(),
   withCredentials: true,
 });
 

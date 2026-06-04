@@ -18,4 +18,6 @@ const watchlaterschema = mongoose.Schema(
   }
 );
 
+watchlaterschema.index({ viewer: 1, videoid: 1 }, { unique: true });
+
 export default mongoose.model("watchlater", watchlaterschema);

@@ -1,8 +1,6 @@
-import { Bell, Menu, Mic, Search, User, VideoIcon } from "lucide-react";
+import { Bell, Menu, Mic, Search, Upload, User } from "lucide-react";
 import React, { useState } from "react";
-import { Button } from "./ui/button";
 import Link from "next/link";
-import { Input } from "./ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,135 +13,183 @@ import Channeldialogue from "./channeldialogue";
 import { useRouter } from "next/router";
 import { useUser } from "@/lib/AuthContext";
 
-const Header = () => {
-  const { user, logout, handlegooglesignin } = useUser();
-  // const user: any = {
-  //   id: "1",
-  //   name: "John Doe",
-  //   email: "john@example.com",
-  //   image: "https://github.com/shadcn.png?height=32&width=32",
-  // };
+interface HeaderProps {
+  onMenuClick: () => void;
+}
+
+const Header = ({ onMenuClick }: HeaderProps) => {
+  const { user, authReady, logout, handlegooglesignin } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isdialogeopen, setisdialogeopen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const router = useRouter();
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
-  const handleKeypress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch(e as any);
-    }
-  };
+
   return (
-    <header className="flex items-center justify-between px-4 py-2 bg-white border-b">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon">
-          <Menu className="w-6 h-6" />
-        </Button>
-        <Link href="/" className="flex items-center gap-1">
-          <div className="bg-red-600 p-1 rounded">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    <header
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        height: "56px",
+        background: "var(--yt-bg)",
+        display: "flex",
+        alignItems: "center",
+        padding: "0 16px",
+        gap: "8px",
+        borderBottom: "1px solid var(--yt-border)",
+      }}
+    >
+      {/* Left: hamburger + logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
+        <button
+          className="yt-icon-btn"
+          onClick={onMenuClick}
+          aria-label="Menu"
+        >
+          <Menu size={20} />
+        </button>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "4px", textDecoration: "none" }}>
+          <div style={{ background: "#ff0000", borderRadius: "4px", padding: "2px 4px", display: "flex", alignItems: "center" }}>
+            <svg width="22" height="16" viewBox="0 0 24 18" fill="white">
+              <path d="M23.5 3.2a3.02 3.02 0 0 0-2.12-2.14C19.4.5 12 .5 12 .5s-7.4 0-9.38.56A3.02 3.02 0 0 0 .5 3.2C0 5.2 0 9 0 9s0 3.8.5 5.8a3.02 3.02 0 0 0 2.12 2.14C4.6 17.5 12 17.5 12 17.5s7.4 0 9.38-.56A3.02 3.02 0 0 0 23.5 14.8C24 12.8 24 9 24 9s0-3.8-.5-5.8zM9.75 12.75V5.25L15.5 9l-5.75 3.75z" />
             </svg>
           </div>
-          <span className="text-xl font-medium">YourTube</span>
-          <span className="text-xs text-gray-400 ml-1">IN</span>
+          <span style={{ fontSize: "18px", fontWeight: 700, color: "var(--yt-text-primary)", letterSpacing: "-0.5px" }}>
+            YourTube
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--yt-text-secondary)", marginTop: "2px" }}>IN</span>
         </Link>
       </div>
-      <form
-        onSubmit={handleSearch}
-        className="flex items-center gap-2 flex-1 max-w-2xl mx-4"
-      >
-        <div className="flex flex-1">
-          <Input
+
+      {/* Center: search bar */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", maxWidth: "720px", margin: "0 auto" }}>
+        <form onSubmit={handleSearch} style={{ display: "flex", width: "100%", maxWidth: "600px" }}>
+          <input
             type="search"
             placeholder="Search"
             value={searchQuery}
-            onKeyPress={handleKeypress}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-l-full border-r-0 focus-visible:ring-0"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            className="yt-search-input"
+            style={searchFocused ? { borderColor: "var(--yt-blue)", boxShadow: "inset 0 1px 2px rgba(0,0,0,.1)" } : {}}
           />
-          <Button
-            type="submit"
-            className="rounded-r-full px-6 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-l-0"
-          >
-            <Search className="w-5 h-5" />
-          </Button>
-        </div>
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <Mic className="w-5 h-5" />
-        </Button>
-      </form>
-      <div className="flex items-center gap-2">
-        {user ? (
+          <button type="submit" className="yt-search-btn" aria-label="Search">
+            <Search size={18} />
+          </button>
+        </form>
+        <button className="yt-icon-btn" style={{ marginLeft: "8px" }} aria-label="Search with voice">
+          <Mic size={18} />
+        </button>
+      </div>
+
+      {/* Right: actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+        {!authReady ? (
+          <div
+            style={{
+              width: "80px",
+              height: "32px",
+              borderRadius: "999px",
+              background: "var(--yt-bg-secondary)",
+            }}
+          />
+        ) : user ? (
           <>
-            <Button variant="ghost" size="icon">
-              <VideoIcon className="w-6 h-6" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Bell className="w-6 h-6" />
-            </Button>
+            <button className="yt-icon-btn" aria-label="Create">
+              <Upload size={20} />
+            </button>
+            <button className="yt-icon-btn" style={{ position: "relative" }} aria-label="Notifications">
+              <Bell size={20} />
+              <span className="yt-notif-dot" />
+            </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-8 w-8 rounded-full"
+                <button
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    borderRadius: "50%",
+                    padding: "2px",
+                    marginLeft: "4px",
+                  }}
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar style={{ width: "32px", height: "32px" }}>
                     <AvatarImage src={user.image} />
-                    <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
+                    <AvatarFallback style={{ background: "#065fd4", color: "white", fontSize: "14px" }}>
+                      {user.name?.[0]?.toUpperCase() || "U"}
+                    </AvatarFallback>
                   </Avatar>
-                </Button>
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuContent
+                style={{
+                  background: "var(--yt-surface)",
+                  border: "1px solid var(--yt-border)",
+                  borderRadius: "12px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+                  minWidth: "220px",
+                  padding: "8px 0",
+                }}
+                align="end"
+              >
+                <div style={{ padding: "12px 16px", display: "flex", gap: "12px", alignItems: "center" }}>
+                  <Avatar style={{ width: "40px", height: "40px" }}>
+                    <AvatarImage src={user.image} />
+                    <AvatarFallback style={{ background: "#065fd4", color: "white" }}>{user.name?.[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p style={{ fontWeight: 500, fontSize: "14px", color: "var(--yt-text-primary)" }}>{user.name}</p>
+                    <p style={{ fontSize: "12px", color: "var(--yt-text-secondary)" }}>{user.email}</p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
                 {user?.channelname ? (
                   <DropdownMenuItem asChild>
-                    <Link href={`/channel/${user?._id}`}>Your channel</Link>
+                    <Link href={`/channel/${user?._id}`} style={{ color: "var(--yt-text-primary)" }}>Your channel</Link>
                   </DropdownMenuItem>
                 ) : (
-                  <div className="px-2 py-1.5">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => setisdialogeopen(true)}
-                    >
-                      Create Channel
-                    </Button>
-                  </div>
+                  <DropdownMenuItem onClick={() => setIsDialogOpen(true)}>
+                    Create Channel
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>
-                  <Link href="/history">History</Link>
+                  <Link href="/history" style={{ color: "var(--yt-text-primary)" }}>History</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/liked">Liked videos</Link>
+                  <Link href="/liked" style={{ color: "var(--yt-text-primary)" }}>Liked videos</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/watch-later">Watch later</Link>
+                  <Link href="/watch-later" style={{ color: "var(--yt-text-primary)" }}>Watch later</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>Sign out</DropdownMenuItem>
+                <DropdownMenuItem onClick={logout} style={{ color: "var(--yt-text-primary)" }}>
+                  Sign out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         ) : (
-          <>
-            <Button
-              className="flex items-center gap-2"
-              onClick={handlegooglesignin}
-            >
-              <User className="w-4 h-4" />
-              Sign in
-            </Button>
-          </>
-        )}{" "}
+          <button className="yt-signin-btn" onClick={handlegooglesignin}>
+            <User size={16} />
+            Sign in
+          </button>
+        )}
       </div>
+
       <Channeldialogue
-        isopen={isdialogeopen}
-        onclose={() => setisdialogeopen(false)}
+        isopen={isDialogOpen}
+        onclose={() => setIsDialogOpen(false)}
         mode="create"
       />
     </header>

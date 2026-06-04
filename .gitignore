@@ -1,3 +1,11 @@
 node_modules/
+client/node_modules/
+server/node_modules/
+client/.next/
+server/uploads/*
+!server/uploads/.gitkeep
 .env
+client/.env.local
+server/.env
 *.log
+*.tsbuildinfo

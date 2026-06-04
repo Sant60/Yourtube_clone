@@ -1,38 +1,38 @@
-"use client";
-
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const categories = [
-  "All",
-  "Music",
-  "Gaming",
-  "Movies",
-  "News",
-  "Sports",
-  "Technology",
-  "Comedy",
-  "Education",
-  "Science",
-  "Travel",
-  "Food",
-  "Fashion",
+  "All", "Music", "Gaming", "Live", "Movies", "News",
+  "Sports", "Technology", "Comedy", "Education", "Science",
+  "Travel", "Food", "Fashion", "Auto",
 ];
 
 export default function CategoryTabs() {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [active, setActive] = useState("All");
 
   return (
-    <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-      {categories.map((category) => (
-        <Button
-          key={category}
-          variant={activeCategory === category ? "default" : "secondary"}
-          className="whitespace-nowrap"
-          onClick={() => setActiveCategory(category)}
+    <div
+      style={{
+        display: "flex",
+        gap: "12px",
+        padding: "12px 24px",
+        overflowX: "auto",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+        background: "var(--yt-bg)",
+        position: "sticky",
+        top: "56px",
+        zIndex: 40,
+      }}
+    >
+      <style>{`.cats::-webkit-scrollbar { display: none; }`}</style>
+      {categories.map((cat) => (
+        <button
+          key={cat}
+          className={`yt-chip ${active === cat ? "active" : ""}`}
+          onClick={() => setActive(cat)}
         >
-          {category}
-        </Button>
+          {cat}
+        </button>
       ))}
     </div>
   );

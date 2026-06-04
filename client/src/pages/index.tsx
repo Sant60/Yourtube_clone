@@ -4,11 +4,11 @@ import { Suspense } from "react";
 
 export default function Home() {
   return (
-    <main className="flex-1 p-4">
+    <div style={{ minHeight: "100vh", background: "var(--yt-bg)" }}>
       <CategoryTabs />
-      <Suspense fallback={<div>Loading videos...</div>}>
+      <Suspense fallback={null}>
         <Videogrid />
       </Suspense>
-    </main>
+    </div>
   );
 }

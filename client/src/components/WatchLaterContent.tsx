@@ -1,140 +1,89 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { MoreVertical, X, Clock, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState, useEffect, useCallback } from "react";
+import { Clock, Play } from "lucide-react";
 import axiosInstance from "@/lib/axiosinstance";
 import { useUser } from "@/lib/AuthContext";
+import { VideoListSkeleton, EmptyState, VideoListItem } from "./HistoryContent";
+import { getBackendAssetUrl } from "@/lib/backend";
 
 export default function WatchLaterContent() {
   const [watchLater, setWatchLater] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const { user } = useUser();
 
-  useEffect(() => {
-    if (user) {
-      loadWatchLater();
-    }
+  const loadWatchLater = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axiosInstance.get(`/watch/${user._id}`);
+      setWatchLater(Array.isArray(res.data) ? res.data : []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, [user]);
 
-  const loadWatchLater = async () => {
-    if (!user) return;
+  useEffect(() => {
+    if (user) loadWatchLater();
+    else setLoading(false);
+  }, [user, loadWatchLater]);
 
-    try {
-      const watchLaterData = await axiosInstance.get(`/watch/${user?._id}`);
+  if (!user) return (
+    <EmptyState
+      icon={<Clock size={64} strokeWidth={1} />}
+      title="Save videos for later"
+      desc="Sign in to access your Watch later playlist."
+    />
+  );
 
-      setWatchLater(watchLaterData.data);
-    } catch (error) {
-      console.error("Error loading history:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) return <VideoListSkeleton />;
 
-  if (loading) {
-    return <div>Loading watch later...</div>;
-  }
-  const handleRemoveFromWatchLater = async (watchLaterId: string) => {
-    try {
-      console.log("Removing from history:", watchLaterId);
-      setWatchLater(watchLater.filter((item) => item._id !== watchLaterId));
-    } catch (error) {
-      console.error("Error removing from history:", error);
-    }
-  };
+  if (watchLater.length === 0) return (
+    <EmptyState
+      icon={<Clock size={64} strokeWidth={1} />}
+      title="No videos saved"
+      desc="Videos you save for later will appear here."
+    />
+  );
 
-  if (!user) {
-    return (
-      <div className="text-center py-12">
-        <Clock className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Save videos for later</h2>
-        <p className="text-gray-600">
-          Sign in to access your Watch later playlist.
-        </p>
-      </div>
-    );
-  }
-
-  if (watchLater.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Clock className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">No videos saved</h2>
-        <p className="text-gray-600">
-          Videos you save for later will appear here.
-        </p>
-      </div>
-    );
-  }
-  const videos = "/video/vdo.mp4";
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">{watchLater.length} videos</p>
-        <Button className="flex items-center gap-2">
-          <Play className="w-4 h-4" />
-          Play all
-        </Button>
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <p style={{ fontSize: "13px", color: "var(--yt-text-secondary)" }}>{watchLater.length} videos</p>
+        <button
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "18px",
+            background: "var(--yt-text-primary)",
+            color: "var(--yt-bg)",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: 500,
+          }}
+        >
+          <Play size={16} /> Play all
+        </button>
       </div>
-
-      <div className="space-y-4">
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {watchLater.map((item) => (
-          <div key={item._id} className="flex gap-4 group">
-            <Link href={`/watch/${item.videoid._id}`} className="flex-shrink-0">
-              <div className="relative w-40 aspect-video bg-gray-100 rounded overflow-hidden">
-                <video
-                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/${item.videoid?.filepath}`}
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-              </div>
-            </Link>
-
-            <div className="flex-1 min-w-0">
-              <Link href={`/watch/${item.videoid._id}`}>
-                <h3 className="font-medium text-sm line-clamp-2 group-hover:text-blue-600 mb-1">
-                  {item.videoid.videotitle}
-                </h3>
-              </Link>
-              <p className="text-sm text-gray-600">
-                {item.videoid.videochanel}
-              </p>
-              <p className="text-sm text-gray-600">
-                {item.videoid.views.toLocaleString()} views •{" "}
-                {formatDistanceToNow(new Date(item.videoid.createdAt))} ago
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Added {formatDistanceToNow(new Date(item.createdAt))} ago
-              </p>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleRemoveFromWatchLater(item._id)}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Remove from Watch later
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <VideoListItem
+            key={item._id}
+            href={`/watch/${item.videoid?._id}`}
+            src={getBackendAssetUrl(item.videoid?.filepath)}
+            title={item.videoid?.videotitle}
+            channel={item.videoid?.videochanel}
+            views={item.videoid?.views}
+            createdAt={item.videoid?.createdAt}
+            badge=""
+            menuOpen={menuOpen === item._id}
+            onMenuToggle={() => setMenuOpen(menuOpen === item._id ? null : item._id)}
+            onMenuAction={() => {
+              setWatchLater((prev) => prev.filter((v) => v._id !== item._id));
+              setMenuOpen(null);
+            }}
+            menuLabel="Remove from Watch later"
+          />
         ))}
       </div>
     </div>

@@ -1,82 +1,45 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import bodyParser from "body-parser";
+import fs from "fs";
 import mongoose from "mongoose";
-import path from "path";
-import { fileURLToPath } from "url";
 
-import userroutes from "./routes/auth.js";
-import videoroutes from "./routes/video.js";
-import likeroutes from "./routes/like.js";
-import watchlaterroutes from "./routes/watchlater.js";
-import historyrroutes from "./routes/history.js";
-import commentroutes from "./routes/comment.js";
+import { createApp } from "./app.js";
+import { serverConfig } from "./config.js";
 
-dotenv.config();
+const app = createApp();
 
-const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+fs.mkdirSync(serverConfig.uploadDir, { recursive: true });
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true,
-  })
-);
-
-// ── Body parsing ──────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "30mb" }));
-app.use(express.urlencoded({ limit: "30mb", extended: true }));
-app.use(bodyParser.json());
-
-// ── Static uploads folder ─────────────────────────────────────────────────────
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// ── Health check ──────────────────────────────────────────────────────────────
-app.get("/", (req, res) => {
-  res.json({ status: "ok", message: "YourTube backend is running" });
-});
-
-// ── Routes ────────────────────────────────────────────────────────────────────
-app.use("/user", userroutes);
-app.use("/video", videoroutes);
-app.use("/like", likeroutes);
-app.use("/watch", watchlaterroutes);
-app.use("/history", historyrroutes);
-app.use("/comment", commentroutes);
-
-// ── 404 handler ───────────────────────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
-
-// ── Global error handler ──────────────────────────────────────────────────────
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Internal server error" });
-});
-
-// ── DB + Server start ─────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-const DBURL = process.env.DB_URL;
-
-if (!DBURL) {
-  console.error("❌  DB_URL is not set in .env — aborting.");
+if (!serverConfig.dbUrl) {
+  console.error("DB_URL is not set in .env and the server cannot start.");
   process.exit(1);
 }
 
+if (process.env.NODE_ENV === "production") {
+  console.warn(
+    "Uploads are stored on the local filesystem. Render disks are ephemeral unless persistent storage or cloud media storage is configured."
+  );
+}
+
 mongoose
-  .connect(DBURL)
+  .connect(serverConfig.dbUrl, {
+    serverSelectionTimeoutMS: 10000,
+  })
   .then(() => {
-    console.log("✅  MongoDB connected");
-    app.listen(PORT, () => {
-      console.log(`🚀  Server running on http://localhost:${PORT}`);
+    console.log("MongoDB connected");
+    const server = app.listen(serverConfig.port, () => {
+      console.log(`Server running on http://localhost:${serverConfig.port}`);
     });
+
+    const shutdown = async () => {
+      server.close(async () => {
+        await mongoose.connection.close();
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
   })
   .catch((error) => {
-    console.error("❌  MongoDB connection failed:", error.message);
+    console.error("MongoDB connection failed:", error.message);
     process.exit(1);
   });

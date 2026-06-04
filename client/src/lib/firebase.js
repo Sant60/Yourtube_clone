@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 // All values come from .env.local — never hard-code keys here
@@ -11,8 +11,18 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+const requiredKeys = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+export const isFirebaseConfigured = requiredKeys.length === 0;
+
+const app =
+  getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig);
+
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-export { auth, provider };
+export { auth, provider, requiredKeys as missingFirebaseConfigKeys };

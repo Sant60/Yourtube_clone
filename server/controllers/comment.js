@@ -3,10 +3,13 @@ import mongoose from "mongoose";
 
 export const postcomment = async (req, res) => {
   const commentdata = req.body;
+  if (!commentdata?.videoid || !commentdata?.commentbody || !commentdata?.usercommented) {
+    return res.status(400).json({ message: "Missing required comment fields" });
+  }
   const postcomment = new comment(commentdata);
   try {
     await postcomment.save();
-    return res.status(200).json({ comment: true });
+    return res.status(201).json({ comment: true, data: postcomment });
   } catch (error) {
     console.error(" error:", error);
     return res.status(500).json({ message: "Something went wrong" });
@@ -15,7 +18,7 @@ export const postcomment = async (req, res) => {
 export const getallcomment = async (req, res) => {
   const { videoid } = req.params;
   try {
-    const commentvideo = await comment.find({ videoid: videoid });
+    const commentvideo = await comment.find({ videoid: videoid }).sort({ commentedon: -1 });
     return res.status(200).json(commentvideo);
   } catch (error) {
     console.error(" error:", error);
@@ -42,10 +45,13 @@ export const editcomment = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(_id)) {
     return res.status(404).send("comment unavailable");
   }
+  if (!commentbody?.trim()) {
+    return res.status(400).json({ message: "Comment body is required" });
+  }
   try {
     const updatecomment = await comment.findByIdAndUpdate(_id, {
-      $set: { commentbody: commentbody },
-    });
+      $set: { commentbody: commentbody.trim() },
+    }, { new: true });
     res.status(200).json(updatecomment);
   } catch (error) {
     console.error(" error:", error);

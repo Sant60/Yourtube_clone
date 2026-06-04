@@ -1,49 +1,77 @@
 import React, { useState } from "react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Button } from "./ui/button";
 
 const ChannelHeader = ({ channel, user }: any) => {
   const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const channelColor = `hsl(${(channel?.channelname?.charCodeAt(0) || 0) * 20}, 60%, 45%)`;
+
   return (
-    <div className="w-full">
+    <div style={{ width: "100%" }}>
       {/* Banner */}
-      <div className="relative h-32 md:h-48 lg:h-64 bg-gradient-to-r from-blue-400 to-purple-500 overflow-hidden"></div>
+      <div
+        style={{
+          height: "180px",
+          background: `linear-gradient(135deg, ${channelColor}, color-mix(in srgb, ${channelColor} 50%, #000))`,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)",
+          }}
+        />
+      </div>
 
-      {/* Channel Info */}
-      <div className="px-4 py-6">
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          <Avatar className="w-20 h-20 md:w-32 md:h-32">
-            <AvatarFallback className="text-2xl">
-              {channel?.channelname[0]}
-            </AvatarFallback>
-          </Avatar>
+      {/* Channel info */}
+      <div
+        style={{
+          padding: "24px",
+          display: "flex",
+          gap: "24px",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+        }}
+      >
+        <Avatar style={{ width: "80px", height: "80px", flexShrink: 0, marginTop: "-16px" }}>
+          <AvatarFallback
+            style={{
+              background: channelColor,
+              color: "white",
+              fontSize: "32px",
+              fontWeight: 700,
+              border: "3px solid var(--yt-bg)",
+            }}
+          >
+            {channel?.channelname?.[0]?.toUpperCase() || "?"}
+          </AvatarFallback>
+        </Avatar>
 
-          <div className="flex-1 space-y-2">
-            <h1 className="text-2xl md:text-4xl font-bold">{channel?.channelname}</h1>
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-              <span>@{channel?.channelname.toLowerCase().replace(/\s+/g, "")}</span>
-            </div>
-            {channel?.description && (
-              <p className="text-sm text-gray-700 max-w-2xl">
-                {channel?.description}
-              </p>
-            )}
-          </div>
-
-          {user && user?._id !== channel?._id && (
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setIsSubscribed(!isSubscribed)}
-                variant={isSubscribed ? "outline" : "default"}
-                className={
-                  isSubscribed ? "bg-gray-100" : "bg-red-600 hover:bg-red-700"
-                }
-              >
-                {isSubscribed ? "Subscribed" : "Subscribe"}
-              </Button>
-            </div>
+        <div style={{ flex: 1 }}>
+          <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--yt-text-primary)", marginBottom: "4px" }}>
+            {channel?.channelname}
+          </h1>
+          <p style={{ fontSize: "14px", color: "var(--yt-text-secondary)", marginBottom: "4px" }}>
+            @{channel?.channelname?.toLowerCase().replace(/\s+/g, "") || ""}
+          </p>
+          {channel?.description && (
+            <p style={{ fontSize: "14px", color: "var(--yt-text-secondary)", maxWidth: "500px" }}>
+              {channel.description}
+            </p>
           )}
         </div>
+
+        {user && user?._id !== channel?._id && (
+          <button
+            className={`yt-subscribe-btn ${isSubscribed ? "subscribed" : ""}`}
+            onClick={() => setIsSubscribed((v) => !v)}
+          >
+            {isSubscribed ? "✓ Subscribed" : "Subscribe"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,15 @@
+{
+  "name": "yourtube-workspace",
+  "private": true,
+  "scripts": {
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "build": "npm --prefix client run build",
+    "lint": "npm --prefix client run lint",
+    "typecheck": "npm --prefix client run typecheck",
+    "test": "npm --prefix server test",
+    "check": "npm --prefix client run check && npm --prefix server run check",
+    "audit:client": "npm --prefix client audit",
+    "audit:server": "npm --prefix server audit"
+  }
+}

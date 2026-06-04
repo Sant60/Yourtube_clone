@@ -1,139 +1,187 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { MoreVertical, X, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import axiosInstance from "@/lib/axiosinstance";
 import { useUser } from "@/lib/AuthContext";
+import { getBackendAssetUrl } from "@/lib/backend";
+
+const formatViews = (n: number) => {
+  if (!n) return "0";
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + "K";
+  return n.toString();
+};
 
 export default function HistoryContent() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const { user } = useUser();
 
-  useEffect(() => {
-    if (user) {
-      loadHistory();
-    } else {
-      setLoading(true);
-    }
+  const loadHistory = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axiosInstance.get(`/history/${user._id}`);
+      setHistory(Array.isArray(res.data) ? res.data : []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, [user]);
 
-  const loadHistory = async () => {
-    if (!user) return;
+  useEffect(() => {
+    if (user) loadHistory();
+    else setLoading(false);
+  }, [user, loadHistory]);
 
-    try {
-      const historyData = await axiosInstance.get(`/history/${user?._id}`);
-      setHistory(historyData.data);
-    } catch (error) {
-      console.error("Error loading history:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  if (loading) {
-    return <div>Loading history...</div>;
-  }
-
-  const handleRemoveFromHistory = async (historyId: string) => {
-    try {
-      console.log("Removing from history:", historyId);
-
-      setHistory(history.filter((item) => item._id !== historyId));
-    } catch (error) {
-      console.error("Error removing from history:", error);
-    }
-  };
+  if (loading) return <VideoListSkeleton />;
 
   if (!user) {
     return (
-      <div className="text-center py-12">
-        <Clock className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">
-          Keep track of what you watch
-        </h2>
-        <p className="text-gray-600">
-          Watch history isn't viewable when signed out.
-        </p>
-      </div>
+      <EmptyState
+        icon={<Clock size={64} strokeWidth={1} />}
+        title="Keep track of what you watch"
+        desc="Watch history isn't viewable when signed out."
+      />
     );
   }
 
   if (history.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Clock className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">No watch history yet</h2>
-        <p className="text-gray-600">Videos you watch will appear here.</p>
-      </div>
+      <EmptyState
+        icon={<Clock size={64} strokeWidth={1} />}
+        title="No watch history yet"
+        desc="Videos you watch will appear here."
+      />
     );
   }
-  const videos = "/video/vdo.mp4";
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">{history.length} videos</p>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <p style={{ fontSize: "13px", color: "var(--yt-text-secondary)", marginBottom: "8px" }}>
+        {history.length} videos
+      </p>
+      {history.map((item) => (
+          <VideoListItem
+            key={item._id}
+            href={`/watch/${item.videoid?._id}`}
+            src={getBackendAssetUrl(item.videoid?.filepath)}
+          title={item.videoid?.videotitle}
+          channel={item.videoid?.videochanel}
+          views={item.videoid?.views}
+          createdAt={item.videoid?.createdAt}
+          badge={`Watched ${item.createdAt ? formatDistanceToNow(new Date(item.createdAt)) + " ago" : ""}`}
+          menuOpen={menuOpen === item._id}
+          onMenuToggle={() => setMenuOpen(menuOpen === item._id ? null : item._id)}
+          onMenuAction={() => {
+            setHistory((prev) => prev.filter((h) => h._id !== item._id));
+            setMenuOpen(null);
+          }}
+          menuLabel="Remove from watch history"
+        />
+      ))}
+    </div>
+  );
+}
 
-      <div className="space-y-4">
-        {history.map((item) => (
-          <div key={item._id} className="flex gap-4 group">
-            <Link href={`/watch/${item.videoid._id}`} className="flex-shrink-0">
-              <div className="relative w-40 aspect-video bg-gray-100 rounded overflow-hidden">
-                <video
-                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/${item.videoid?.filepath}`}
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-              </div>
-            </Link>
-
-            <div className="flex-1 min-w-0">
-              <Link href={`/watch/${item.videoid._id}`}>
-                <h3 className="font-medium text-sm line-clamp-2 group-hover:text-blue-600 mb-1">
-                  {item.videoid.videotitle}
-                </h3>
-              </Link>
-              <p className="text-sm text-gray-600">
-                {item.videoid.videochanel}
-              </p>
-              <p className="text-sm text-gray-600">
-                {item.videoid.views.toLocaleString()} views •{" "}
-                {formatDistanceToNow(new Date(item.videoid.createdAt))} ago
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Added {formatDistanceToNow(new Date(item.createdAt))} ago
-              </p>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleRemoveFromHistory(item._id)}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Remove from watch history
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+export function VideoListSkeleton() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} style={{ display: "flex", gap: "12px" }}>
+          <div style={{ width: "168px", aspectRatio: "16/9", borderRadius: "8px", background: "var(--yt-bg-secondary)", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ height: "14px", borderRadius: "4px", background: "var(--yt-bg-secondary)", marginBottom: "8px", width: "80%" }} />
+            <div style={{ height: "12px", borderRadius: "4px", background: "var(--yt-bg-secondary)", width: "50%" }} />
           </div>
-        ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function EmptyState({ icon, title, desc }: any) {
+  return (
+    <div style={{ textAlign: "center", padding: "64px 24px", color: "var(--yt-text-secondary)" }}>
+      <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}>{icon}</div>
+      <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--yt-text-primary)", marginBottom: "8px" }}>{title}</h2>
+      <p style={{ fontSize: "14px" }}>{desc}</p>
+    </div>
+  );
+}
+
+export function VideoListItem({ href, src, title, channel, views, createdAt, badge, menuOpen, onMenuToggle, onMenuAction, menuLabel }: any) {
+  return (
+    <div
+      style={{ display: "flex", gap: "12px", padding: "8px", borderRadius: "8px", position: "relative" }}
+      className="yt-video-card"
+    >
+      <Link href={href} style={{ textDecoration: "none", flexShrink: 0 }}>
+        <div style={{ position: "relative", width: "168px", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden", background: "#0f0f0f" }}>
+          <video
+            src={src}
+            className="yt-thumb-img"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            muted preload="metadata"
+          />
+          <span className="yt-duration">10:24</span>
+        </div>
+      </Link>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Link href={href} style={{ textDecoration: "none" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 500, color: "var(--yt-text-primary)", marginBottom: "4px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {title}
+          </h3>
+        </Link>
+        <p style={{ fontSize: "13px", color: "var(--yt-text-secondary)", marginBottom: "2px" }}>{channel}</p>
+        <p style={{ fontSize: "13px", color: "var(--yt-text-secondary)" }}>
+          {formatViews(views)} views{createdAt ? " • " + formatDistanceToNow(new Date(createdAt)) + " ago" : ""}
+        </p>
+        {badge && <p style={{ fontSize: "12px", color: "var(--yt-text-tertiary)", marginTop: "4px" }}>{badge}</p>}
+      </div>
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <button
+          className="yt-icon-btn"
+          style={{ width: "32px", height: "32px" }}
+          onClick={onMenuToggle}
+        >
+          <MoreVertical size={16} />
+        </button>
+        {menuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: "36px",
+              background: "var(--yt-surface)",
+              border: "1px solid var(--yt-border)",
+              borderRadius: "8px",
+              boxShadow: "0 4px 16px rgba(0,0,0,.15)",
+              zIndex: 10,
+              minWidth: "200px",
+              padding: "4px 0",
+            }}
+          >
+            <button
+              onClick={onMenuAction}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 16px",
+                fontSize: "14px",
+                color: "var(--yt-text-primary)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                width: "100%",
+                textAlign: "left",
+              }}
+            >
+              <X size={16} />
+              {menuLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

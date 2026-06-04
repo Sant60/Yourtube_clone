@@ -11,8 +11,8 @@ const commentschema = mongoose.Schema(
       ref: "videofiles",
       required: true,
     },
-    commentbody: { type: String },
-    usercommented: { type: String },
+    commentbody: { type: String, required: true, trim: true },
+    usercommented: { type: String, required: true, trim: true },
     commentedon: { type: Date, default: Date.now },
   },
   {

@@ -1,9 +1,13 @@
 import video from "../Modals/video.js";
 import like from "../Modals/like.js";
+import mongoose from "mongoose";
 
 export const handlelike = async (req, res) => {
   const { userId } = req.body;
   const { videoId } = req.params;
+  if (!userId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    return res.status(400).json({ message: "Invalid like request" });
+  }
   try {
     const exisitinglike = await like.findOne({
       viewer: userId,

@@ -6,88 +6,187 @@ import {
   ThumbsUp,
   History,
   User,
+  Flame,
+  Music2,
+  Gamepad2,
+  Newspaper,
+  Trophy,
+  Film,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
-import { Button } from "./ui/button";
 import Channeldialogue from "./channeldialogue";
 import { useUser } from "@/lib/AuthContext";
+import { useRouter } from "next/router";
 
-const Sidebar = () => {
+interface SidebarProps {
+  open: boolean;
+}
+
+const Sidebar = ({ open }: SidebarProps) => {
   const { user } = useUser();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const router = useRouter();
+  const path = router.pathname;
 
-  const [isdialogeopen, setisdialogeopen] = useState(false);
+  const mainLinks = [
+    { href: "/", icon: Home, label: "Home" },
+    { href: "/explore", icon: Compass, label: "Explore" },
+    { href: "/subscriptions", icon: PlaySquare, label: "Subscriptions" },
+  ];
+
+  const userLinks = [
+    { href: "/history", icon: History, label: "History" },
+    { href: "/liked", icon: ThumbsUp, label: "Liked videos" },
+    { href: "/watch-later", icon: Clock, label: "Watch later" },
+  ];
+
+  const exploreLinks = [
+    { href: "/trending", icon: Flame, label: "Trending" },
+    { href: "/music", icon: Music2, label: "Music" },
+    { href: "/gaming", icon: Gamepad2, label: "Gaming" },
+    { href: "/news", icon: Newspaper, label: "News" },
+    { href: "/sports", icon: Trophy, label: "Sports" },
+    { href: "/movies", icon: Film, label: "Movies" },
+  ];
+
+  if (!open) {
+    // Mini sidebar
+    return (
+      <aside
+        style={{
+          position: "fixed",
+          top: "56px",
+          left: 0,
+          bottom: 0,
+          width: "72px",
+          background: "var(--yt-bg)",
+          zIndex: 50,
+          overflowY: "auto",
+          padding: "8px 0",
+          transition: "width 0.2s",
+        }}
+      >
+        <nav>
+          {mainLinks.map(({ href, icon: Icon, label }) => (
+            <Link href={href} key={href} className={`yt-nav-item-mini ${path === href ? "active" : ""}`}>
+              <Icon size={22} />
+              <span>{label}</span>
+            </Link>
+          ))}
+          {user && (
+            <>
+              <div className="yt-sidebar-divider" style={{ margin: "8px 8px" }} />
+              {userLinks.map(({ href, icon: Icon, label }) => (
+                <Link href={href} key={href} className={`yt-nav-item-mini ${path === href ? "active" : ""}`}>
+                  <Icon size={22} />
+                  <span>{label.split(" ")[0]}</span>
+                </Link>
+              ))}
+              {user?.channelname ? (
+                <Link href={`/channel/${user._id}`} className={`yt-nav-item-mini ${path.startsWith("/channel") ? "active" : ""}`}>
+                  <User size={22} />
+                  <span>Channel</span>
+                </Link>
+              ) : (
+                <button
+                  className="yt-nav-item-mini"
+                  onClick={() => setIsDialogOpen(true)}
+                  style={{ width: "100%", border: "none", background: "none" }}
+                >
+                  <User size={22} />
+                  <span>Create</span>
+                </button>
+              )}
+            </>
+          )}
+        </nav>
+        <Channeldialogue isopen={isDialogOpen} onclose={() => setIsDialogOpen(false)} mode="create" />
+      </aside>
+    );
+  }
+
+  // Full sidebar
   return (
-    <aside className="w-64 bg-white  border-r min-h-screen p-2">
-      <nav className="space-y-1">
-        <Link href="/">
-          <Button variant="ghost" className="w-full justify-start">
-            <Home className="w-5 h-5 mr-3" />
-            Home
-          </Button>
-        </Link>
-        <Link href="/explore">
-          <Button variant="ghost" className="w-full justify-start">
-            <Compass className="w-5 h-5 mr-3" />
-            Explore
-          </Button>
-        </Link>
-        <Link href="/subscriptions">
-          <Button variant="ghost" className="w-full justify-start">
-            <PlaySquare className="w-5 h-5 mr-3" />
-            Subscriptions
-          </Button>
-        </Link>
+    <aside
+      style={{
+        position: "fixed",
+        top: "56px",
+        left: 0,
+        bottom: 0,
+        width: "240px",
+        background: "var(--yt-bg)",
+        zIndex: 50,
+        overflowY: "auto",
+        padding: "8px 12px",
+        transition: "width 0.2s",
+      }}
+    >
+      <nav>
+        {mainLinks.map(({ href, icon: Icon, label }) => (
+          <Link href={href} key={href} className={`yt-nav-item ${path === href ? "active" : ""}`}>
+            <Icon size={20} />
+            {label}
+          </Link>
+        ))}
+
+        <div className="yt-sidebar-divider" />
 
         {user && (
           <>
-            <div className="border-t pt-2 mt-2">
-              <Link href="/history">
-                <Button variant="ghost" className="w-full justify-start">
-                  <History className="w-5 h-5 mr-3" />
-                  History
-                </Button>
+            <p style={{ fontSize: "14px", fontWeight: 600, padding: "8px 12px 4px", color: "var(--yt-text-primary)" }}>
+              You
+            </p>
+            {userLinks.map(({ href, icon: Icon, label }) => (
+              <Link href={href} key={href} className={`yt-nav-item ${path === href ? "active" : ""}`}>
+                <Icon size={20} />
+                {label}
               </Link>
-              <Link href="/liked">
-                <Button variant="ghost" className="w-full justify-start">
-                  <ThumbsUp className="w-5 h-5 mr-3" />
-                  Liked videos
-                </Button>
+            ))}
+            {user?.channelname ? (
+              <Link href={`/channel/${user._id}`} className={`yt-nav-item ${path.startsWith("/channel") ? "active" : ""}`}>
+                <User size={20} />
+                Your channel
               </Link>
-              <Link href="/watch-later">
-                <Button variant="ghost" className="w-full justify-start">
-                  <Clock className="w-5 h-5 mr-3" />
-                  Watch later
-                </Button>
-              </Link>
-              {user?.channelname ? (
-                <Link href={`/channel/${user.id}`}>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <User className="w-5 h-5 mr-3" />
-                    Your channel
-                  </Button>
-                </Link>
-              ) : (
-                <div className="px-2 py-1.5">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => setisdialogeopen(true)}
-                  >
-                    Create Channel
-                  </Button>
-                </div>
-              )}
-            </div>
+            ) : (
+              <button
+                className="yt-nav-item"
+                onClick={() => setIsDialogOpen(true)}
+                style={{ border: "none", background: "none", cursor: "pointer" }}
+              >
+                <User size={20} />
+                Create Channel
+              </button>
+            )}
+            <div className="yt-sidebar-divider" />
           </>
         )}
+
+        <p style={{ fontSize: "14px", fontWeight: 600, padding: "8px 12px 4px", color: "var(--yt-text-primary)" }}>
+          Explore
+        </p>
+        {exploreLinks.map(({ href, icon: Icon, label }) => (
+          <Link href={href} key={href} className={`yt-nav-item ${path === href ? "active" : ""}`}>
+            <Icon size={20} />
+            {label}
+          </Link>
+        ))}
+
+        <div className="yt-sidebar-divider" />
+        <div style={{ padding: "12px", fontSize: "12px", color: "var(--yt-text-secondary)", lineHeight: 1.8 }}>
+          <p>About Press Copyright</p>
+          <p>Contact us Creators</p>
+          <p>Advertise Developers</p>
+          <br />
+          <p>Terms Privacy Policy & Safety</p>
+          <p>How YouTube works</p>
+          <p>Test new features</p>
+          <br />
+          <p>© 2024 YourTube Clone</p>
+        </div>
       </nav>
-      <Channeldialogue
-        isopen={isdialogeopen}
-        onclose={() => setisdialogeopen(false)}
-        mode="create"
-      />
+
+      <Channeldialogue isopen={isDialogOpen} onclose={() => setIsDialogOpen(false)} mode="create" />
     </aside>
   );
 };

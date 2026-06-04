@@ -1,141 +1,89 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { MoreVertical, X, ThumbsUp, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState, useEffect, useCallback } from "react";
+import { ThumbsUp, Play } from "lucide-react";
 import { useUser } from "@/lib/AuthContext";
 import axiosInstance from "@/lib/axiosinstance";
+import { VideoListSkeleton, EmptyState, VideoListItem } from "./HistoryContent";
+import { getBackendAssetUrl } from "@/lib/backend";
 
 export default function LikedVideosContent() {
   const [likedVideos, setLikedVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const { user } = useUser();
 
-  useEffect(() => {
-    if (user) {
-      loadLikedVideos();
-    }
+  const loadLikedVideos = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axiosInstance.get(`/like/${user._id}`);
+      setLikedVideos(Array.isArray(res.data) ? res.data : []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, [user]);
 
-  const loadLikedVideos = async () => {
-    if (!user) return;
+  useEffect(() => {
+    if (user) loadLikedVideos();
+    else setLoading(false);
+  }, [user, loadLikedVideos]);
 
-    try {
-      const likedData = await axiosInstance.get(`/like/${user?._id}`);
+  if (!user) return (
+    <EmptyState
+      icon={<ThumbsUp size={64} strokeWidth={1} />}
+      title="Keep track of videos you like"
+      desc="Sign in to see your liked videos."
+    />
+  );
 
-      setLikedVideos(likedData.data);
-    } catch (error) {
-      console.error("Error loading liked videos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) return <VideoListSkeleton />;
 
-  const handleUnlikeVideo = async (videoId: string, likedVideoId: string) => {
-    if (!user) return;
+  if (likedVideos.length === 0) return (
+    <EmptyState
+      icon={<ThumbsUp size={64} strokeWidth={1} />}
+      title="No liked videos yet"
+      desc="Videos you like will appear here."
+    />
+  );
 
-    try {
-      console.log("Unliking video:", videoId, "for user:", user.id);
-      setLikedVideos(likedVideos.filter((item) => item._id !== likedVideoId));
-    } catch (error) {
-      console.error("Error unliking video:", error);
-    }
-  };
-
-  if (!user) {
-    return (
-      <div className="text-center py-12">
-        <ThumbsUp className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">
-          Keep track of videos you like
-        </h2>
-        <p className="text-gray-600">Sign in to see your liked videos.</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return <div>Loading liked videos...</div>;
-  }
-
-  if (likedVideos.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <ThumbsUp className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">No liked videos yet</h2>
-        <p className="text-gray-600">Videos you like will appear here.</p>
-      </div>
-    );
-  }
-  const videos = "/video/vdo.mp4";
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">{likedVideos.length} videos</p>
-        <Button className="flex items-center gap-2">
-          <Play className="w-4 h-4" />
-          Play all
-        </Button>
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <p style={{ fontSize: "13px", color: "var(--yt-text-secondary)" }}>{likedVideos.length} videos</p>
+        <button
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "18px",
+            background: "var(--yt-text-primary)",
+            color: "var(--yt-bg)",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: 500,
+          }}
+        >
+          <Play size={16} /> Play all
+        </button>
       </div>
-
-      <div className="space-y-4">
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {likedVideos.map((item) => (
-          <div key={item._id} className="flex gap-4 group">
-            <Link href={`/watch/${item.videoid._id}`} className="flex-shrink-0">
-              <div className="relative w-40 aspect-video bg-gray-100 rounded overflow-hidden">
-                <video
-                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/${item.videoid?.filepath}`}
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-              </div>
-            </Link>
-
-            <div className="flex-1 min-w-0">
-              <Link href={`/watch/${item.videoid._id}`}>
-                <h3 className="font-medium text-sm line-clamp-2 group-hover:text-blue-600 mb-1">
-                  {item.videoid.videotitle}
-                </h3>
-              </Link>
-              <p className="text-sm text-gray-600">
-                {item.videoid.videochanel}
-              </p>
-              <p className="text-sm text-gray-600">
-                {item.videoid.views.toLocaleString()} views •{" "}
-                {formatDistanceToNow(new Date(item.videoid.createdAt))} ago
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Liked {formatDistanceToNow(new Date(item.createdAt))} ago
-              </p>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleUnlikeVideo(item.videoid._id, item._id)}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Remove from liked videos
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <VideoListItem
+            key={item._id}
+            href={`/watch/${item.videoid?._id}`}
+            src={getBackendAssetUrl(item.videoid?.filepath)}
+            title={item.videoid?.videotitle}
+            channel={item.videoid?.videochanel}
+            views={item.videoid?.views}
+            createdAt={item.videoid?.createdAt}
+            badge=""
+            menuOpen={menuOpen === item._id}
+            onMenuToggle={() => setMenuOpen(menuOpen === item._id ? null : item._id)}
+            onMenuAction={() => {
+              setLikedVideos((prev) => prev.filter((v) => v._id !== item._id));
+              setMenuOpen(null);
+            }}
+            menuLabel="Remove from liked videos"
+          />
         ))}
       </div>
     </div>

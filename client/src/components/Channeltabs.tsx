@@ -1,29 +1,44 @@
 import React, { useState } from "react";
-import { Button } from "./ui/button";
+
 const tabs = [
   { id: "home", label: "Home" },
   { id: "videos", label: "Videos" },
-  { id: "shorts", label: "Shorts" },
   { id: "playlists", label: "Playlists" },
   { id: "community", label: "Community" },
   { id: "about", label: "About" },
 ];
+
 const Channeltabs = () => {
-  const [activeTab, setActiveTab] = useState("videos");
+  const [active, setActive] = useState("videos");
+
   return (
-    <div className="border-b px-4">
-      <div className="flex gap-8 overflow-x-auto">
+    <div
+      style={{
+        borderBottom: "1px solid var(--yt-border)",
+        padding: "0 24px",
+      }}
+    >
+      <div style={{ display: "flex", gap: "0", overflowX: "auto" }}>
         {tabs.map((tab) => (
-          <Button
+          <button
             key={tab.id}
-            variant="ghost"
-            className={`px-0 py-4 border-b-2 rounded-none ${
-              activeTab === tab.id ? "border-black text-black" : "border-transparent text-gray-600 hover:text-black"
-            }`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActive(tab.id)}
+            style={{
+              padding: "12px 16px",
+              fontSize: "14px",
+              fontWeight: active === tab.id ? 600 : 400,
+              color: active === tab.id ? "var(--yt-text-primary)" : "var(--yt-text-secondary)",
+              background: "none",
+              border: "none",
+              borderBottom: active === tab.id ? "2px solid var(--yt-text-primary)" : "2px solid transparent",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "color 0.15s",
+              letterSpacing: "0.01em",
+            }}
           >
             {tab.label}
-          </Button>
+          </button>
         ))}
       </div>
     </div>

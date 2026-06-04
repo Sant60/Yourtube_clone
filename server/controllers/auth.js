@@ -3,6 +3,9 @@ import users from "../Modals/Auth.js";
 
 export const login = async (req, res) => {
   const { email, name, image } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
   try {
     const existingUser = await users.findOne({ email });
@@ -22,7 +25,7 @@ export const updateprofile = async (req, res) => {
   const { id: _id } = req.params;
   const { channelname, description } = req.body;
   if (!mongoose.Types.ObjectId.isValid(_id)) {
-    return res.status(500).json({ message: "User unavailable..." });
+    return res.status(400).json({ message: "Invalid user id" });
   }
   try {
     const updatedata = await users.findByIdAndUpdate(

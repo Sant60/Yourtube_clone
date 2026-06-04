@@ -3,85 +3,88 @@ import RelatedVideos from "@/components/RelatedVideos";
 import VideoInfo from "@/components/VideoInfo";
 import Videopplayer from "@/components/Videopplayer";
 import axiosInstance from "@/lib/axiosinstance";
-import { notFound } from "next/navigation";
 import { useRouter } from "next/router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-const index = () => {
+const WatchPage = () => {
   const router = useRouter();
   const { id } = router.query;
-  const [videos, setvideo] = useState<any>(null);
-  const [video, setvide] = useState<any>(null);
-  const [loading, setloading] = useState(true);
+  const [currentVideo, setCurrentVideo] = useState<any>(null);
+  const [allVideos, setAllVideos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchvideo = async () => {
-      if (!id || typeof id !== "string") return;
+    if (!id || typeof id !== "string") return;
+    const fetchVideo = async () => {
+      setLoading(true);
       try {
         const res = await axiosInstance.get("/video/getall");
-        const video = res.data?.filter((vid: any) => vid._id === id);
-        setvideo(video[0]);
-        setvide(res.data);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setloading(false);
-      }
+        const data: any[] = Array.isArray(res.data) ? res.data : [];
+        const found = data.find((v) => v._id === id) ?? null;
+        setCurrentVideo(found);
+        setAllVideos(data.filter((v) => v._id !== id));
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     };
-    fetchvideo();
+    fetchVideo();
   }, [id]);
-  // const relatedVideos = [
-  //   {
-  //     _id: "1",
-  //     videotitle: "Amazing Nature Documentary",
-  //     filename: "nature-doc.mp4",
-  //     filetype: "video/mp4",
-  //     filepath: "/videos/nature-doc.mp4",
-  //     filesize: "500MB",
-  //     videochanel: "Nature Channel",
-  //     Like: 1250,
-  //     Dislike: 50,
-  //     views: 45000,
-  //     uploader: "nature_lover",
-  //     createdAt: new Date().toISOString(),
-  //   },
-  //   {
-  //     _id: "2",
-  //     videotitle: "Cooking Tutorial: Perfect Pasta",
-  //     filename: "pasta-tutorial.mp4",
-  //     filetype: "video/mp4",
-  //     filepath: "/videos/pasta-tutorial.mp4",
-  //     filesize: "300MB",
-  //     videochanel: "Chef's Kitchen",
-  //     Like: 890,
-  //     Dislike: 20,
-  //     views: 23000,
-  //     uploader: "chef_master",
-  //     createdAt: new Date(Date.now() - 86400000).toISOString(),
-  //   },
-  // ];
+
   if (loading) {
-    return <div>Loading..</div>;
-  }
-  
-  if (!videos) {
-    return <div>Video not found</div>;
-  }
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <Videopplayer video={videos} />
-            <VideoInfo video={videos} />
-            <Comments videoId={id} />
+    return (
+      <div style={{ padding: "24px", maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 402px", gap: "24px" }}>
+          <div>
+            <div style={{ paddingTop: "56.25%", borderRadius: "12px", background: "var(--yt-bg-secondary)", marginBottom: "16px" }} />
+            <div style={{ height: "20px", background: "var(--yt-bg-secondary)", borderRadius: "4px", width: "70%", marginBottom: "12px" }} />
+            <div style={{ height: "14px", background: "var(--yt-bg-secondary)", borderRadius: "4px", width: "40%" }} />
           </div>
-          <div className="space-y-4">
-            <RelatedVideos videos={video} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ display: "flex", gap: "8px" }}>
+                <div style={{ width: "168px", aspectRatio: "16/9", borderRadius: "8px", background: "var(--yt-bg-secondary)", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: "12px", background: "var(--yt-bg-secondary)", borderRadius: "4px", marginBottom: "8px" }} />
+                  <div style={{ height: "10px", background: "var(--yt-bg-secondary)", borderRadius: "4px", width: "60%" }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (!currentVideo) {
+    return (
+      <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--yt-text-secondary)" }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 600, color: "var(--yt-text-primary)", marginBottom: "8px" }}>
+          Video not found
+        </h2>
+        <p>This video may have been removed or is unavailable.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "24px", maxWidth: "1280px", margin: "0 auto" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 402px", gap: "24px" }}>
+        <div>
+          <Videopplayer video={currentVideo} />
+          <VideoInfo video={currentVideo} />
+          <Comments videoId={id as string} />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <RelatedVideos videos={allVideos} />
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .watch-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default index;
+export default WatchPage;
